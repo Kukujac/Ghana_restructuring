@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ghana Territories Map</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1b2a22;--muted:#66736b;--line:#e3e7e1;--paper:#fbfbf8;--gold:#e0a800;--green:#0b6b45}
+html,body{height:100%;margin:0;font-family:'Public Sans',system-ui,sans-serif;color:var(--ink)}
+#app{display:flex;height:100%}
+#side{width:390px;max-width:100%;background:var(--paper);border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:1000}
+#map{flex:1;height:100%}
+.head{padding:18px 20px 12px;border-bottom:4px solid var(--gold)}
+.head h1{font-size:1.35rem;font-weight:700;margin:0}
+.head p{margin:2px 0 0;color:var(--muted);font-size:.85rem}
+.nav-pills{padding:10px 14px;gap:4px;border-bottom:1px solid var(--line)}
+.nav-pills .nav-link{font-size:.8rem;padding:6px 10px;color:var(--ink);border-radius:6px}
+.nav-pills .nav-link.active{background:var(--green);color:#fff}
+.body{overflow-y:auto;padding:16px 20px 28px;flex:1}
+h2{font-size:1.05rem;font-weight:700;margin:0 0 2px}
+.sub{color:var(--muted);font-size:.82rem;margin-bottom:12px}
+h3{font-size:.85rem;font-weight:700;margin:20px 0 8px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#fff}
+.kpi b{display:block;font-size:1.3rem;line-height:1.1}
+.kpi span{font-size:.75rem;color:var(--muted)}
+.row-bar{display:grid;grid-template-columns:118px 1fr 62px;gap:8px;align-items:center;font-size:.78rem;padding:3px 0;cursor:pointer}
+.row-bar:hover .lab{text-decoration:underline}
+.lab{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track{background:#edf0ea;height:10px;border-radius:5px;overflow:hidden}
+.fill{height:100%;border-radius:5px}
+.val{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.note{font-size:.78rem;color:var(--muted);border-left:3px solid var(--gold);padding-left:10px;margin-top:16px}
+.pop h4{margin:0;padding:10px 14px;color:#fff;font-size:.95rem;font-weight:700}
+.pop small{display:block;font-weight:400;opacity:.9;font-size:.75rem}
+.pop table{margin:8px 14px 10px;font-size:.8rem;border-collapse:collapse}
+.pop td{padding:3px 0;vertical-align:top}.pop td:first-child{color:var(--muted);padding-right:14px;white-space:nowrap}
+.leaflet-popup-content-wrapper{padding:0;overflow:hidden;border-radius:10px}.leaflet-popup-content{margin:0;min-width:240px}
+.donut b{position:absolute;inset:0;display:grid;place-items:center;font-size:.75rem;color:var(--ink)}
+.pulse i{position:absolute;left:5px;top:5px;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3)}
+.pulse span{position:absolute;inset:0;border:2px solid;border-radius:50%;opacity:0;animation:pl 1.2s ease-out infinite}
+.pulse.medium span{animation-duration:2.4s}.pulse.low span{animation:none}
+@keyframes pl{0%{transform:scale(.45);opacity:.9}100%{transform:scale(1.9);opacity:0}}
+@media(prefers-reduced-motion:reduce){.pulse span{animation:none!important}}
+.legend{background:#fff;padding:8px 12px;border-radius:8px;font-size:.78rem;box-shadow:0 1px 6px rgba(0,0,0,.25);line-height:1.6}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.legend{max-width:310px;max-height:55vh;overflow:auto;line-height:1.3}.legend b{display:block;margin-top:8px}
+.lg-h{font-weight:700;font-size:.9rem}.lg-i{display:flex;align-items:center;font-size:.72rem;break-inside:avoid;padding:1px 0}
+.lg-grid{column-count:2;column-gap:12px}.lg-bar{height:10px;border-radius:5px;background:linear-gradient(90deg,#2b83ba,#abdda4,#ffffbf,#fdae61,#d7191c)}
+.lg-lh{display:flex;justify-content:space-between;font-size:.7rem}
+#mapTitle{display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1000;background:#fff;padding:8px 24px;border-bottom:4px solid var(--gold);box-shadow:0 1px 6px rgba(0,0,0,.25);text-align:center;pointer-events:none}
+#mapTitle b{display:block;font-size:1.3rem}#mapTitle small{color:var(--muted)}
+body.exporting #mapTitle{display:block}
+body.exporting .leaflet-control-zoom,body.exporting .leaflet-control-layers,body.exporting .xbtn{display:none}
+body.exporting .legend{max-height:none;overflow:visible}body.nolegend .legend{display:none}
+.gl{width:0;height:0}.gl span{position:absolute;white-space:nowrap;font-size:11px;background:rgba(255,255,255,.85);padding:0 3px;color:#333}
+.gl.top span{transform:translate(-50%,2px)}.gl.left span{transform:translate(2px,-50%)}
+.north{background:#fff;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.25);padding:2px 6px}
+@media print{#side,#search{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1000;width:clamp(220px,30vw,400px)}
+#search input{box-shadow:0 1px 6px rgba(0,0,0,.25)}
+#sres{background:#fff;border-radius:8px;margin-top:4px;box-shadow:0 2px 10px rgba(0,0,0,.3);max-height:330px;overflow:auto;display:none}
+.si{padding:7px 12px;cursor:pointer;font-size:.85rem;border-bottom:1px solid var(--line)}.si:last-child{border:0}
+.si.on,.si:hover{background:#f1f5ef}.si small{display:block;color:var(--muted);font-size:.75rem}
+.sd{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}.sk{float:right;font-size:.7rem;color:var(--muted)}
+.sn{padding:10px 12px;font-size:.82rem;color:var(--muted)}
+body.exporting #search{display:none}
+@media(max-width:800px){#search{top:52px}}
+#toggle{display:none!important}#app{display:block}#map{position:fixed;inset:0;width:100%;height:100%}@page{size:A4 landscape;margin:6mm}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+#toggle{display:none;position:absolute;top:10px;left:50px;z-index:1100}
+@media(max-width:800px){#side{position:absolute;inset:0 auto 0 0;width:88%;transform:translateX(-100%);transition:transform .2s}#side.open{transform:none}#toggle{display:block}}
+@media(prefers-reduced-motion:reduce){#side{transition:none}}
+</style>
+</head>
+<body>
+<script>
+(function(){function show(m){var d=document.getElementById('errbar');if(!d){d=document.createElement('div');d.id='errbar';d.style.cssText='position:fixed;left:0;right:0;top:0;z-index:99999;background:#b00020;color:#fff;font:14px system-ui,sans-serif;padding:10px 16px';document.body.appendChild(d)}d.innerHTML+='<div>'+m+'</div>'}
+window.addEventListener('error',function(e){var t=e.target;if(t&&(t.src||t.href)&&t!==window){show('Could not load: '+(t.src||t.href))}else{show('Script error: '+e.message+(e.lineno?' (line '+e.lineno+')':''))}},true)})();
+</script>
+<div id="app">
+ <aside id="side">
+  <div class="head"><h1>Ghana Territories Map</h1><p>Electrified households, sales territories and regions</p></div>
+  <ul class="nav nav-pills" role="tablist">
+   <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#t-over">Overview</button></li>
+   <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-mmda">MMDAs</button></li>
+   <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-terr">Territories</button></li>
+   <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#t-reg">Regions</button></li>
+  </ul>
+  <div class="body tab-content">
+   <div class="tab-pane fade show active" id="t-over"></div>
+   <div class="tab-pane fade" id="t-mmda"></div>
+   <div class="tab-pane fade" id="t-terr"></div>
+   <div class="tab-pane fade" id="t-reg"></div>
+  </div>
+ </aside>
+ <div id="map"></div>
+</div>
+<button id="toggle" class="btn btn-light btn-sm shadow">Analysis</button>
+
+<div class="modal fade" id="exp" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+<div class="modal-header"><h5 class="modal-title">Export or print map</h5><button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+<div class="modal-body"><label class="form-label" for="xt">Map title</label><input id="xt" class="form-control mb-3" value="Ghana Territories Map">
+<div class="form-check"><input class="form-check-input" type="checkbox" id="xl" checked><label class="form-check-label" for="xl">Include legend</label></div>
+<div class="form-check"><input class="form-check-input" type="checkbox" id="xg" checked><label class="form-check-label" for="xg">Include coordinate grid</label></div>
+<p class="small text-muted mt-3 mb-0">Uses the current view and the layers switched on. The scale bar and north arrow are always included.</p></div>
+<div class="modal-footer"><button id="xprint" class="btn btn-outline-secondary">Print / Save as PDF</button><button id="xpng" class="btn btn-success">Download PNG</button></div>
+</div></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="data/data.js"></script>
+<script>
+const HH='Electrified Households (Estimate)', POS='Target POS (Per 2000)';
+const L1=GH.layers.loc.features, L2=GH.layers.terrPts.features, TR=GH.layers.territories.features, RG=GH.layers.regions.features;
+const TC=GH.styles.territories||{}, RC=GH.styles.regions||{};
+const fmt=n=>(+n||0).toLocaleString('en-GB'), sum=(a,f)=>a.reduce((s,x)=>s+(+f(x)||0),0);
+const tcol=t=>TC[t]||'#9aa59d', clean=s=>String(s||'').replace(/\s*\n\s*/g,', ');
+const group=(arr,k,v)=>{const m={};arr.forEach(x=>{const g=k(x)||'Unassigned';m[g]=(m[g]||0)+(+v(x)||0)});return Object.entries(m).sort((a,b)=>b[1]-a[1])};
+
+/* ---------- map ---------- */
+const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,crossOrigin:true,attribution:'&copy; OpenStreetMap contributors'});
+const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,crossOrigin:true,attribution:'Tiles &copy; Esri'});
+const map=L.map('map',{layers:[osm],zoomControl:true}).setView([7.9,-1.0],7);
+
+function pop(title,sub,color,rows){
+ const r=rows.filter(x=>x[1]!==null&&x[1]!==''&&x[1]!==undefined).map(x=>`<tr><td>${x[0]}</td><td>${x[1]}</td></tr>`).join('');
+ return `<div class="pop"><h4 style="background:${color}">${title}<small>${sub||''}</small></h4><table>${r}</table></div>`;}
+const dark=c=>{const n=parseInt(c.slice(1),16);return ((n>>16)*.299+((n>>8)&255)*.587+(n&255)*.114)>170?'#1b2a22':'#fff'};
+
+const regions=L.geoJSON(GH.layers.regions,{
+ style:f=>({color:'#232323',weight:1.2,fillColor:RC[f.properties.pkuid]||'#ccc',fillOpacity:.35}),
+ onEachFeature:(f,l)=>l.bindPopup(pop(f.properties['Regional Name'],'Region',(RC[f.properties.pkuid]||'#555'),[['Region ID',f.properties.pkuid]]))
+});
+
+const territories=L.geoJSON(GH.layers.territories,{
+ style:f=>({color:'#232323',weight:1,fillColor:tcol(f.properties.territory),fillOpacity:.5}),
+ onEachFeature:(f,l)=>{const p=f.properties,c=tcol(p.territory);
+  l.bindPopup(pop(p.territory||'Territory',p.name,c,[['Category',p.category],['TSM',p.tsm],['DE',p.de],['Electrified HH',p['total elec hh']?fmt(p['total elec hh']):null],['DStv target',p.dstv_target],['GOtv target',p.gotv_target],['Contribution',clean(p.regional_contribution)],['Major towns',clean(p['major towns'])]]));
+  l.on('mouseover',()=>l.setStyle({weight:3})).on('mouseout',()=>territories.resetStyle(l));
+  p._layer=l;}
+});
+
+const grid=L.layerGroup();
+const TIERS={High:'#d7191c',Medium:'#f2a900',Low:'#2e8b57'};
+/* Urgency = target POS tertile of the layer (top third High, middle Medium, rest Low). Change tierFn to use another rule or field. */
+const tierFn=feats=>{const v=feats.map(f=>f.properties[POS]||0).sort((a,b)=>a-b),lo=v[Math.floor(v.length/3)],hi=v[Math.floor(v.length*2/3)];
+ const fn=p=>{const x=p[POS]||0;return x>=hi?'High':x>=lo?'Medium':'Low'};fn.lo=lo;fn.hi=hi;return fn};
+const tierL=tierFn(L1), tierT=tierFn(L2);
+function mkUrg(data,tier,sw){
+ const cl=L.markerClusterGroup({showCoverageOnHover:false,maxClusterRadius:55,iconCreateFunction:c=>{
+  const ms=c.getAllChildMarkers(),n=ms.length,cnt={High:0,Medium:0,Low:0};ms.forEach(m=>cnt[m.options.urg]++);
+  let off=25,segs='';for(const k in cnt){if(!cnt[k])continue;const pc=cnt[k]/n*100;segs+=`<circle r="15.9155" cx="21" cy="21" fill="none" stroke="${TIERS[k]}" stroke-width="7" stroke-dasharray="${pc} ${100-pc}" stroke-dashoffset="${off}"/>`;off-=pc}
+  const z=n<10?40:n<50?48:58;
+  return L.divIcon({className:'donut',iconSize:[z,z],html:`<svg viewBox="0 0 42 42" width="${z}" height="${z}"><circle r="12.5" cx="21" cy="21" fill="#fff"/>${segs}</svg><b>${n}</b>`})}});
+ L.geoJSON(data,{
+  pointToLayer:(f,ll)=>{const u=tier(f.properties);return L.marker(ll,{urg:u,icon:L.divIcon({className:'pulse '+u.toLowerCase(),iconSize:[22,22],html:`<i style="background:${TIERS[u]}"></i><span style="border-color:${TIERS[u]}"></span>`})})},
+  onEachFeature:(f,l)=>{const p=f.properties,u=tier(p);l.bindPopup(pop(p['MMDA (as provided)'],'Capital: '+(p.Capital||'n/a'),TIERS[u],[['Urgency',u+' (target POS '+p[POS]+')'],['Region',p.Regions],['Territory',p.territory||p.Territory],['Electrified HH',fmt(p[HH])],['Territory HH',p['total elec hh']?fmt(p['total elec hh']):null]]));p._layer=l}
+ }).eachLayer(l=>cl.addLayer(l));
+ return cl}
+const locL=mkUrg(GH.layers.loc,tierL), terL=mkUrg(GH.layers.terrPts,tierT);
+const urgCount=group(L1,f=>tierL(f.properties),()=>1).sort((a,b)=>['High','Medium','Low'].indexOf(a[0])-['High','Medium','Low'].indexOf(b[0]));
+
+
+const GRAD={.2:'#2b83ba',.45:'#abdda4',.65:'#ffffbf',.85:'#fdae61',1:'#d7191c'};
+const mkHeat=(pts,o)=>{const m=Math.max(...pts.map(x=>x[2]),1);return L.heatLayer(pts.map(x=>[x[0],x[1],x[2]/m]),Object.assign({radius:28,blur:22,maxZoom:10,gradient:GRAD},o))};
+const pts=(feats,key)=>feats.map(f=>[f.geometry.coordinates[1],f.geometry.coordinates[0],f.properties[key]||0]);
+const heatHH=mkHeat(pts(L1,HH)), heatPOS=mkHeat(pts(L2,POS)), heatHH2=mkHeat(pts(L2,HH));
+const inRing=(pt,r)=>{let c=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const[xi,yi]=r[i],[xj,yj]=r[j];if((yi>pt[1])!==(yj>pt[1])&&pt[0]<(xj-xi)*(pt[1]-yi)/(yj-yi)+xi)c=!c}return c};
+const inGeom=(pt,g)=>(g.type==='Polygon'?[g.coordinates]:g.coordinates).some(p=>inRing(pt,p[0])&&!p.slice(1).some(h=>inRing(pt,h)));
+const ctr=g=>L.geoJSON(g).getBounds().getCenter();
+const heatTerr=mkHeat(TR.filter(f=>f.properties.territory&&f.properties['total elec hh']).map(f=>{const c=ctr(f.geometry);return[c.lat,c.lng,+f.properties['total elec hh']]}),{radius:55,blur:35,maxZoom:8});
+const heatReg=mkHeat(RG.map(f=>{const c=ctr(f.geometry);return[c.lat,c.lng,sum(L1.filter(x=>inGeom(x.geometry.coordinates,f.geometry)),x=>x.properties[HH])]}),{radius:80,blur:50,maxZoom:7});
+
+territories.addTo(map); locL.addTo(map);
+L.control.layers({'OpenStreetMap':osm,'Esri satellite':sat},{
+ 'Regions':regions,'Territories':territories,'Electrified HH per location':locL,'Electrified HH per territory (points)':terL,
+ 'Heatmap: HH per location (points)':heatHH,'Heatmap: HH per territory (points)':heatHH2,'Heatmap: target POS (points)':heatPOS,'Heatmap: territories (polygons, total HH)':heatTerr,'Heatmap: regions (polygons, HH in boundary)':heatReg, 'Coordinate grid (lat/lon)':grid},{collapsed:false}).addTo(map);
+L.control.scale({position:'bottomleft',imperial:false}).addTo(map);
+map.fitBounds(territories.getBounds());
+
+/* ---------- grid, legend, compass, export ---------- */
+function drawGrid(){
+ grid.clearLayers(); if(!map.hasLayer(grid))return;
+ const b=map.getBounds(),w=b.getWest(),e=b.getEast(),so=b.getSouth(),n=b.getNorth();
+ const step=[10,5,2,1,.5,.25,.1,.05,.02,.01].find(x=>(e-w)/x>=4)||.01, dec=step>=1?0:step>=.1?(step*10%1?2:1):2;
+ const lab=(v,pos,cls,t)=>L.marker(pos,{interactive:false,icon:L.divIcon({className:'gl '+cls,html:`<span>${t}</span>`,iconSize:[0,0]})}).addTo(grid);
+ for(let x=Math.ceil(w/step)*step;x<=e;x+=step){const v=+x.toFixed(4);L.polyline([[so,v],[n,v]],{color:'#333',weight:.8,opacity:.45,dashArray:'4 4',interactive:false}).addTo(grid);lab(v,[n,v],'top',Math.abs(v).toFixed(dec)+'°'+(v<0?'W':'E'))}
+ for(let y=Math.ceil(so/step)*step;y<=n;y+=step){const v=+y.toFixed(4);L.polyline([[v,w],[v,e]],{color:'#333',weight:.8,opacity:.45,dashArray:'4 4',interactive:false}).addTo(grid);lab(v,[v,w],'left',Math.abs(v).toFixed(dec)+'°'+(v<0?'S':'N'))}
+}
+map.on('moveend overlayadd overlayremove',drawGrid);
+
+let legendEl;
+const sw=(c,t,sq)=>`<div class="lg-i"><i style="background:${c};${sq?'border-radius:2px;opacity:.8':''}"></i>${t}</div>`;
+function drawLegend(){
+ const on=l=>map.hasLayer(l),h=[];
+ if(on(territories))h.push(`<b>Territories</b><div class="lg-grid">${Object.keys(TC).filter(k=>k!=='NULL').sort().map(k=>sw(TC[k],k,1)).join('')}</div>`);
+ if(on(regions))h.push(`<b>Regions</b>${RG.map(f=>sw(RC[f.properties.pkuid]||'#ccc',f.properties['Regional Name'],1)).join('')}`);
+ if(on(locL)||on(terL))h.push(`<b>MMDA urgency (target POS)</b>${sw(TIERS.High,'High: '+tierL.hi+' or more')}${sw(TIERS.Medium,'Medium: '+tierL.lo+' to '+(tierL.hi-1))}${sw(TIERS.Low,'Low: below '+tierL.lo)}<small>Rings show each tier's share in a cluster</small>`);
+ if([heatHH,heatHH2,heatPOS,heatTerr,heatReg].some(on))h.push(`<b>Heatmap intensity</b><div class="lg-bar"></div><div class="lg-lh"><span>Low</span><span>High</span></div>`);
+ legendEl.innerHTML='<div class="lg-h">Legend</div>'+(h.join('')||'<small>No layers selected</small>');
+}
+const legendCtl=L.control({position:'bottomright'});
+legendCtl.onAdd=()=>{legendEl=L.DomUtil.create('div','legend');L.DomEvent.disableClickPropagation(legendEl);L.DomEvent.disableScrollPropagation(legendEl);return legendEl};
+legendCtl.addTo(map);drawLegend();map.on('overlayadd overlayremove',drawLegend);
+
+const nCtl=L.control({position:'topleft'});
+nCtl.onAdd=()=>{const d=L.DomUtil.create('div','north');d.innerHTML='<svg width="40" height="52" viewBox="0 0 44 56" aria-label="North arrow"><text x="22" y="10" text-anchor="middle" font-size="12" font-weight="700" fill="#1b2a22">N</text><circle cx="22" cy="35" r="17" fill="#fff" stroke="#1b2a22"/><path d="M22 14L29 41L22 36L15 41Z" fill="#1b2a22"/><path d="M22 14L22 36L15 41Z" fill="#fff" stroke="#1b2a22" stroke-width="1"/></svg>';return d};
+nCtl.addTo(map);
+const xCtl=L.control({position:'topleft'});
+xCtl.onAdd=()=>{const d=L.DomUtil.create('div','xbtn');d.innerHTML='<button class="btn btn-light btn-sm shadow">Export / Print</button>';L.DomEvent.disableClickPropagation(d);d.firstChild.onclick=()=>bootstrap.Modal.getOrCreateInstance('#exp').show();return d};
+xCtl.addTo(map);
+
+const $=id=>document.getElementById(id), titleEl=document.createElement('div');
+titleEl.id='mapTitle';map.getContainer().appendChild(titleEl);
+let gridWas=false;
+const esc=t=>t.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function prep(on){
+ document.body.classList.toggle('exporting',on);
+ if(on){titleEl.innerHTML=`<b>${esc($('xt').value)}</b><small>${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</small>`;
+  document.body.classList.toggle('nolegend',!$('xl').checked);gridWas=map.hasLayer(grid);
+  if($('xg').checked&&!gridWas)grid.addTo(map);if(!$('xg').checked&&gridWas)map.removeLayer(grid);
+ }else{document.body.classList.remove('nolegend');if(map.hasLayer(grid)!==gridWas)gridWas?grid.addTo(map):map.removeLayer(grid)}
+ drawGrid();
+}
+const run=fn=>{const m=$('exp');m.addEventListener('hidden.bs.modal',fn,{once:true});bootstrap.Modal.getInstance(m).hide()};
+$('xprint').onclick=()=>run(()=>{prep(true);map.invalidateSize();setTimeout(()=>{drawGrid();window.print()},600)});
+window.addEventListener('afterprint',()=>{if(document.body.classList.contains('exporting')){prep(false);map.invalidateSize()}});
+$('xpng').onclick=()=>run(()=>{prep(true);setTimeout(()=>html2canvas(map.getContainer(),{useCORS:true,scale:2,logging:false}).then(c=>{const a=document.createElement('a');a.download='ghana-territories-map.png';a.href=c.toDataURL('image/png');a.click()}).catch(()=>alert('The browser blocked the PNG export. Use Print / Save as PDF instead.')).finally(()=>prep(false)),600)});
+
+
+/* ---------- analysis ---------- */
+function bars(rows,colorFn,onClick){
+ const m=Math.max(...rows.map(r=>r[1]),1);
+ return rows.map((r,i)=>`<div class="row-bar" data-i="${i}"><span class="lab" title="${r[0]}">${r[0]}</span><div class="track"><div class="fill" style="width:${r[1]/m*100}%;background:${colorFn(r)}"></div></div><span class="val">${fmt(r[1])}</span></div>`).join('');}
+function wire(el,rows,fn){el.querySelectorAll('.row-bar').forEach(d=>d.onclick=()=>fn(rows[d.dataset.i]));}
+const totHH=sum(L1,f=>f.properties[HH]), totPOS=sum(L2,f=>f.properties[POS]);
+const topN=(arr,n)=>arr.slice(0,n);
+
+// Overview
+const over=document.getElementById('t-over');
+over.innerHTML=`<h2>National picture</h2><div class="sub">Totals across the layers in this map</div>
+<div class="kpis"><div class="kpi"><b>${fmt(totHH)}</b><span>Electrified households (est.)</span></div><div class="kpi"><b>${fmt(totPOS)}</b><span>Target points of sale</span></div>
+<div class="kpi"><b>${L1.length}</b><span>MMDAs mapped</span></div><div class="kpi"><b>${TR.length}</b><span>Territories</span></div></div>
+<h3>Households per target point of sale</h3><div class="kpis"><div class="kpi"><b>${fmt(Math.round(totHH/totPOS))}</b><span>HH per POS, national average</span></div><div class="kpi"><b>${fmt(Math.round(totHH/TR.length))}</b><span>HH per territory, average</span></div></div>
+<p class="note">Use the layer control on the map to switch basemaps, toggle layers or turn on any of the five heatmaps. Click any feature for details. Click a bar in the other tabs to zoom to it.</p>`;
+
+// MMDAs
+const mm=document.getElementById('t-mmda');
+const topM=topN(L1.slice().sort((a,b)=>b.properties[HH]-a.properties[HH]),8);
+const byReg=group(L1,f=>f.properties.Regions,f=>f.properties[HH]);
+const posT=group(L2,f=>f.properties.Territory,f=>f.properties[POS]).slice(0,8);
+mm.innerHTML=`<h2>MMDAs</h2><div class="sub">Point layers: Electrified HH per location and per territory</div>
+<h3>MMDAs by urgency</h3><div>${bars(urgCount,r=>TIERS[r[0]])}</div><div class="sub">High and Medium MMDAs pulse on the map. High pulses fastest.</div><h3>Largest MMDAs by electrified households</h3><div id="m1">${bars(topM.map(f=>[f.properties['MMDA (as provided)'],f.properties[HH]]),()=>'#7d8b8f')}</div>
+<h3>Electrified households by region</h3><div>${bars(byReg,()=>'#5f824f')}</div>
+<h3>Territories with the most target POS</h3><div id="m3">${bars(posT,r=>tcol(r[0].toUpperCase()))}</div>
+<p class="note">The top 8 MMDAs hold ${Math.round(sum(topM,f=>f.properties[HH])/totHH*100)}% of all electrified households.</p>`;
+wire(mm.querySelector('#m1'),topM,r=>{const f=topM.find(x=>x.properties['MMDA (as provided)']===r[0]);if(!map.hasLayer(locL))locL.addTo(map);locL.zoomToShowLayer(f.properties._layer,()=>f.properties._layer.openPopup())});
+
+// Territories
+const te=document.getElementById('t-terr');
+const tRows=TR.filter(f=>f.properties.territory).map(f=>[f.properties.territory,+f.properties['total elec hh']||0]).sort((a,b)=>b[1]-a[1]);
+const cats=group(TR,f=>f.properties.category,()=>1);
+te.innerHTML=`<h2>Territories</h2><div class="sub">Polygon layer: ${TR.length} sales territories, coloured as in QGIS</div>
+<h3>Electrified households by territory</h3><div id="tt">${bars(tRows,r=>tcol(r[0]))}</div>
+<h3>Territories per distributor category</h3><div>${bars(cats,()=>'#e0a800')}</div>
+<p class="note">${tRows[0][0]} is the largest territory with ${fmt(tRows[0][1])} households, ${(tRows[0][1]/tRows[tRows.length-1][1]).toFixed(1)}x the smallest (${tRows[tRows.length-1][0]}).</p>`;
+wire(te.querySelector('#tt'),tRows,r=>{const f=TR.find(x=>x.properties.territory===r[0]);if(!map.hasLayer(territories))territories.addTo(map);map.fitBounds(f.properties._layer.getBounds());f.properties._layer.openPopup()});
+
+// Regions
+const rg=document.getElementById('t-reg');
+const byName=group(TR,f=>f.properties.name,f=>f.properties['total elec hh']);
+const cnt=group(TR,f=>f.properties.name,()=>1);
+rg.innerHTML=`<h2>Regions</h2><div class="sub">Polygon layer: ${RG.length} regional groupings</div>
+<h3>Electrified households by region group</h3><div>${bars(byName,()=>'#0b6b45')}</div>
+<h3>Territories per region group</h3><div>${bars(cnt,()=>'#e0a800')}</div>
+<h3>Regional boundaries</h3><div id="rr">${bars(RG.map(f=>[f.properties['Regional Name'],1]),r=>RC[RG.find(x=>x.properties['Regional Name']===r[0]).properties.pkuid]||'#ccc')}</div>`;
+rg.querySelectorAll('#rr .val').forEach(v=>v.textContent='');
+rg.querySelectorAll('#rr .row-bar').forEach((d,i)=>d.onclick=()=>{if(!map.hasLayer(regions))regions.addTo(map);const f=RG[i];map.fitBounds(L.geoJSON(f).getBounds())});
+
+
+/* ---------- search ---------- */
+const SIDX=[],seen=new Set(),skipK=k=>k[0]==='_'||k==='Latitude'||k==='Longitude';
+function addIdx(kind,grp,f,lbl,sub,color,lookup){
+ const p=f.properties,parts=[];
+ for(const k in p){if(skipK(k)||p[k]===null||p[k]==='')continue;parts.push([k,String(p[k]).replace(/\s*\n\s*/g,' ')])}
+ SIDX.push({kind,grp,f,lbl,sub,color,lookup,parts,txt:parts.map(x=>x[1]).join(' | ').toLowerCase()});
+}
+const mk=p=>((p['MMDA (as provided)']||'')+'|'+(p.Capital||'')).toLowerCase();
+L1.forEach(f=>{const p=f.properties;seen.add(mk(p));addIdx('MMDA',locL,f,p['MMDA (as provided)'],[p.Capital,p.Regions].filter(Boolean).join(', '),TIERS[tierL(p)],()=>p._layer)});
+L2.forEach(f=>{const p=f.properties;if(seen.has(mk(p)))return;addIdx('MMDA',terL,f,p['MMDA (as provided)'],[p.Capital,p.Regions].filter(Boolean).join(', '),TIERS[tierT(p)],()=>p._layer)});
+TR.forEach(f=>{const p=f.properties;if(!p.territory)return;addIdx('Territory',territories,f,p.territory,p.name,tcol(p.territory),()=>p._layer)});
+RG.forEach(f=>addIdx('Region',regions,f,f.properties['Regional Name'],'Region boundary',RC[f.properties.pkuid]||'#888',()=>{let r;regions.eachLayer(l=>{if(l.feature===f)r=l});return r}));
+function findMatches(q){
+ const t=q.toLowerCase().split(/\s+/).filter(Boolean);if(!t.length)return[];
+ const r=[];for(const e of SIDX){if(!t.every(x=>e.txt.includes(x)))continue;const l=e.lbl.toLowerCase();r.push([l.startsWith(t[0])?0:l.includes(t[0])?1:2,e])}
+ return r.sort((a,b)=>a[0]-b[0]||a[1].lbl.localeCompare(b[1].lbl)).slice(0,12).map(x=>x[1]);
+}
+const sbox=document.createElement('div');sbox.id='search';
+sbox.innerHTML='<input class="form-control" type="search" placeholder="Search MMDA, capital, territory, region, TSM…" aria-label="Search the map" autocomplete="off"><div id="sres" role="listbox"></div>';
+map.getContainer().appendChild(sbox);L.DomEvent.disableClickPropagation(sbox);L.DomEvent.disableScrollPropagation(sbox);
+const sin=sbox.querySelector('input'),sres=sbox.querySelector('#sres');let cur=[],act=-1,hiT;
+const e2=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function showRes(){
+ const q=sin.value.trim();if(!q){sres.style.display='none';return}
+ cur=findMatches(q);act=cur.length?0:-1;const t0=q.toLowerCase().split(/\s+/)[0];
+ sres.innerHTML=cur.length?cur.map((e,i)=>{const m=e.parts.find(x=>x[1].toLowerCase().includes(t0)&&x[1]!==e.lbl);
+  return `<div class="si${i===0?' on':''}" data-i="${i}" role="option"><span class="sk">${e.kind}</span><span class="sd" style="background:${e.color}"></span><b>${e2(e.lbl)}</b><small>${e2(e.sub||'')}${m?(e.sub?' · ':'')+e2(m[0]+': '+m[1].slice(0,40)):''}</small></div>`}).join(''):'<div class="sn">No matches. Try a different spelling or fewer words.</div>';
+ sres.style.display='block';
+}
+function mark(i){sres.querySelectorAll('.si').forEach((d,j)=>d.classList.toggle('on',j===i));const d=sres.querySelectorAll('.si')[i];if(d)d.scrollIntoView({block:'nearest'})}
+function go(e){
+ sres.style.display='none';sin.value=e.lbl;sin.blur();
+ if(!map.hasLayer(e.grp))e.grp.addTo(map);
+ const l=e.lookup();if(!l)return;clearTimeout(hiT);
+ if(e.kind==='MMDA'){
+  const ll=l.getLatLng();map.setView(ll,Math.max(map.getZoom(),11));
+  const ring=L.circleMarker(ll,{radius:20,color:'#e0a800',weight:3,fill:false,interactive:false}).addTo(map);
+  setTimeout(()=>e.grp.zoomToShowLayer(l,()=>l.openPopup()),450);hiT=setTimeout(()=>map.removeLayer(ring),4000);
+ }else{
+  map.fitBounds(l.getBounds(),{maxZoom:11,padding:[40,40]});l.setStyle({weight:4,color:'#e0a800'});
+  setTimeout(()=>l.openPopup(),450);hiT=setTimeout(()=>e.grp.resetStyle(l),4000);
+ }
+}
+sin.addEventListener('input',showRes);sin.addEventListener('focus',showRes);
+sin.addEventListener('keydown',ev=>{
+ if(ev.key==='ArrowDown'&&cur.length){act=(act+1)%cur.length;mark(act);ev.preventDefault()}
+ else if(ev.key==='ArrowUp'&&cur.length){act=(act-1+cur.length)%cur.length;mark(act);ev.preventDefault()}
+ else if(ev.key==='Enter'&&act>=0){go(cur[act]);ev.preventDefault()}
+ else if(ev.key==='Escape'){sres.style.display='none';sin.blur()}
+});
+sres.addEventListener('mousedown',ev=>{const d=ev.target.closest('.si');if(d){ev.preventDefault();go(cur[+d.dataset.i])}});
+sin.addEventListener('blur',()=>setTimeout(()=>{sres.style.display='none'},150));
+
+// mobile toggle
+document.getElementById('toggle').onclick=()=>document.getElementById('side').classList.toggle('open');
+</script>
+</body>
+</html>
